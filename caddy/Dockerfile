@@ -8,4 +8,6 @@ RUN xcaddy build \
 
 FROM caddy:latest
 
+LABEL org.opencontainers.image.source=https://github.com/MuLinForest/homelab-images
+
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
