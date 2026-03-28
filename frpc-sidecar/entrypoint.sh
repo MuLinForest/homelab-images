@@ -7,7 +7,7 @@ serverPort = ${FRPS_PORT:-7000}
 auth.token = "${FRPS_TOKEN}"
 
 [[proxies]]
-name = "${SUBDOMAIN}"
+name = "${NAME:-$SUBDOMAIN}"
 type = "http"
 localIP = "${LOCAL_IP}"
 localPort = ${LOCAL_PORT}
