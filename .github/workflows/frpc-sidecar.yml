@@ -2,14 +2,49 @@ name: Build frpc-sidecar
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 每天凌晨 3 點
+    - cron: '0 3 * * *'
   push:
     paths:
       - 'frpc-sidecar/**'
   workflow_dispatch:
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+      - name: Check if upstream changed
+        id: check
+        run: |
+          docker pull snowdreamtech/frpc:latest --platform linux/amd64 -q 2>/dev/null
+          DIGEST=$(docker inspect snowdreamtech/frpc:latest --format '{{index .RepoDigests 0}}' | cut -d@ -f2)
+          TAG="frpc-base-$(echo $DIGEST | tr ':' '-')"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "上游無變化，跳過 build"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "有新版本，開始 build"
+            echo "$DIGEST" > /tmp/digest
+          fi
+      - name: Tag digest for next check
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git config user.email "bot@mulin.date"
+          git config user.name "caddy-bot"
+          git tag "frpc-base-$(tr ':' '-' < /tmp/digest)"
+          git remote add token "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" 2>/dev/null || git remote set-url token "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push token --tags 2>/dev/null
+
   build:
+    needs: check
+    if: needs.check.outputs.skip == 'false'
     runs-on: ubuntu-latest
     permissions:
       contents: read
