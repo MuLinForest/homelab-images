@@ -25,7 +25,7 @@ jobs:
           docker pull caddy:latest --platform linux/amd64 -q 2>/dev/null
           DIGEST=$(docker inspect caddy:latest --format '{{index .RepoDigests 0}}' | cut -d@ -f2)
           # 用 git tag 記錄上次 build 的 digest
-          TAG="caddy-base-$DIGEST"
+          TAG="caddy-base-$(echo $DIGEST | tr ':' '-')"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "上游無變化，跳過 build"
