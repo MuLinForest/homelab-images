@@ -6,7 +6,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+      - name: Check if upstream changed
+        id: check
+        run: |
+          docker pull caddy:latest --platform linux/amd64 -q 2>/dev/null
+          DIGEST=$(docker inspect caddy:latest --format '{{index .RepoDigests 0}}' | cut -d@ -f2)
+          TAG="caddy-bin-base-$DIGEST"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "上游無變化，跳過 build"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "有新版本，開始 build"
+            echo "$DIGEST" > /tmp/digest
+          fi
+      - name: Tag digest for next check
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git config user.email "bot@mulin.date"
+          git config user.name "caddy-bot"
+          git tag "caddy-bin-base-$(cat /tmp/digest)"
+          git remote add token "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push token --tags
+
   build-binary:
+    needs: check
+    if: needs.check.outputs.skip == 'false'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -30,8 +65,12 @@ jobs:
             --with github.com/caddy-dns/duckdns \
             --output caddy-linux-amd64
 
+      - name: Get version info
+        id: version
+        run: echo "v=$(./caddy-linux-amd64 version | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: caddy-linux-amd64
+          name: caddy-linux-amd64-${{ steps.version.outputs.v }}
           path: caddy-linux-amd64
