@@ -74,3 +74,12 @@ jobs:
         with:
           name: caddy-linux-amd64-${{ steps.version.outputs.v }}
           path: caddy-linux-amd64
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: caddy-${{ steps.version.outputs.v }}
+          name: Caddy ${{ steps.version.outputs.v }} (with alidns/cloudflare/dynu/duckdns)
+          files: caddy-linux-amd64
+          make_latest: true
+          generate_release_notes: false
