@@ -1,0 +1,37 @@
+name: Build caddy binary
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-binary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Install xcaddy
+        run: go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+
+      - name: Build caddy with plugins
+        run: |
+          ~/go/bin/xcaddy build v2.11.3 \
+            --with github.com/caddy-dns/alidns \
+            --with github.com/caddy-dns/cloudflare \
+            --with github.com/caddy-dns/dynu \
+            --with github.com/caddy-dns/duckdns \
+            --output caddy-linux-amd64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: caddy-linux-amd64
+          path: caddy-linux-amd64
