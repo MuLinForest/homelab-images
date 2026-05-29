@@ -39,7 +39,7 @@ jobs:
         run: |
           git config user.email "bot@mulin.date"
           git config user.name "caddy-bot"
-          git tag "caddy-base-$(cat /tmp/digest)"
+          git tag "caddy-base-$(tr ':' '-' < /tmp/digest)"
           git remote add token "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" 2>/dev/null || git remote set-url token "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
           git push token --tags 2>/dev/null
 
